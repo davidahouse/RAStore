@@ -10,5 +10,6 @@
 @interface NSObject (jsdStoreCategory)
 
 - (id)valueForPath:(NSArray *)path;
+// - (void)setValue:(NSString *)value forPath:(NSArray *)path;
 
 @end

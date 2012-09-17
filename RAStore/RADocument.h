@@ -20,10 +20,15 @@
 #pragma mark - Initializers
 - (id)initFromResults:(FMResultSet *)resultSet;
 - (id)initWithBody:(id)initBody;
+- (id)init;
+
+#pragma mark - Index declarations
++ (NSArray *)indexedColumns;
 
 #pragma mark - Insert/Update/Delete methods
-- (void)store;
+- (void)insert;
 - (void)update;
+- (void)delete;
 
 #pragma mark - Query methods
 + (id)find:(NSString *)key;
@@ -37,7 +42,5 @@
 - (NSDate *)dateInBodyUsingPath:(NSString *)path default:(NSDate *)defaultDate;
 - (NSArray *)arrayInBodyUsingPath:(NSString *)path;
 
-#pragma mark - Body update methods
-- (void)setStringInBody:(NSString *)setString usingPath:(NSString *)path;
 
 @end

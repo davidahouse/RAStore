@@ -27,7 +27,9 @@
 + (void)replaceCollection:(NSString *)collection withJSON:(NSData *)jsonData usingClass:(Class)docClass;
 + (void)updateCollection:(NSString *)collection withJSON:(NSData *)jsonData usingClass:(Class)docClass;
 + (void)emptyCollection:(NSString *)collection;
-+ (void)insertDocument:(RADocument *)document intoCollection:(NSString *)collection;
++ (void)insertDocument:(RADocument *)document withClass:(Class)docClass;
++ (void)updateDocument:(RADocument *)document inCollection:(NSString *)collection;
++ (void)deleteDocument:(RADocument *)document fromCollection:(NSString *)collection;
 
 #pragma mark - Library methods
 + (void)replaceLibrary:(NSString *)library withResource:(NSString *)resource ofType:(NSString *)type;

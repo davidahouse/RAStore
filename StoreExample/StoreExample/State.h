@@ -13,7 +13,9 @@
 #pragma mark - Properties
 @property (nonatomic,readonly) NSString *capital;
 @property (nonatomic,readonly) NSString *mostPopulousCity;
-@property (nonatomic,retain) NSString *size;
+@property (nonatomic,readonly) NSString *size;
 
+#pragma mark - Index searches
++ (NSArray *)findInCapital:(NSString *)searchClause;
 
 @end

@@ -24,9 +24,17 @@
     return [self stringInBodyUsingPath:@"attributes\\size" default:@"unknown"];
 }
 
-- (void)setSize:(NSString *)size {
-    [self setStringInBody:size usingPath:@"attributes\\size"];
+#pragma mark - Index searches
++ (NSArray *)findInCapital:(NSString *)searchClause {
+ 
+    // TODO: Implement this
+    return nil;
 }
+
++ (NSArray *)indexedColumns {
+    return @[@"capital"];
+}
+
 
 #pragma mark - Path methods that should be overriden
 - (NSString *)pathForKey {

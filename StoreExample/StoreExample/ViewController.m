@@ -41,19 +41,22 @@
     // Return all the State objects in the store
     NSLog(@"=== allDocuments");
     NSArray *states = [State findAll];
-    NSLog(@"%d states found, should be 50",[states count]);
+    if ( [states count] == 50 ) {
+        NSLog(@"%d states found, should be 50 [OK]",[states count]);
+    }
+    else {
+        NSLog(@"%d states found, but should have been 50 [ERROR]",[states count]);
+    }
     
     // Find a particular state by the Key
     NSLog(@"=== find");
     State *georgia = [State find:@"GA"];
     if ( georgia ) {
-        NSLog(@"found georgia, the capital is %@",georgia.capital);
+        NSLog(@"found georgia, the capital is %@ [OK]",georgia.capital);
     }
     else {
-        NSLog(@"ERROR: state not found");
+        NSLog(@"state not found! [ERROR]");
     }
-    
-    // More things to implement & test:
     
     // Access non-property data from an object
     NSLog(@"=== stringInBodyUsingPath");
@@ -65,31 +68,76 @@
     NSArray *startsWithC = [State findInTitle:@"like 'C%'"];
     NSLog(@"found %d states that start with C",[startsWithC count]);
     for ( State *s in startsWithC ) {
-        NSLog(@"%@",s.title);
+        NSLog(@"%@ %@",s.title,s.capital);
     }
+    
+    // Create new record by settings values (not from JSON)
+    State *newState = [[State alloc] init];
+    newState.key = @"NEWSTATE";
+    newState.title = @"My New State";
+    newState.foreignKey = @"FK";
+    [newState insert];
     
     // Search by foreign key
-    
-    // Update existing objects
-    for ( State *s in states ) {
-        
+    NSArray *statesByFk = [State findWithForeignKey:@"FK"];
+    if ( [statesByFk count] == 1 ) {
+        NSLog(@"Found state by foreign key %@ [OK]",((State *)[statesByFk objectAtIndex:0]).key);
+    }
+    else {
+        NSLog(@"Expeced 1 from foreign key search, found %d [ERROR]",[statesByFk count]);
     }
     
+    // Update existing objects
+    State *alabama = [State find:@"AL"];
+    NSString *updatedAlabama = @"{\"attributes\":{\"name\":\"ALABAMA\",\"abbreviation\":\"AL\",\"capital\":\"Montgomery\",\"size\":\"big\",\"most-populous-city\":\"Birmingham\",\"population\":\"4708708\",\"square-miles\":\"52423\",\"time-zone-1\":\"CST (UTC-6)\",\"time-zone-2\":\"EST (UTC-5)\",\"dst\":\"YES\"}}";
+    NSError *error;
+    id alabamaObject = [NSJSONSerialization JSONObjectWithData:[updatedAlabama dataUsingEncoding:NSUTF8StringEncoding] options:0 error:&error];
+    [alabama setBody:alabamaObject];
+    [alabama update];
     
+    // Reload the object, and see if our update has been stored
+    State *alabamaReload = [State find:@"AL"];
+    if ( [[alabamaReload size] isEqualToString:@"big"] ) {
+        NSLog(@"state size updated correctly [OK]");
+    }
+    else {
+        NSLog(@"state size was %@ but should have been big [ERROR]",alabamaReload.size);
+    }
     
     // Delete an object
-    // Delete a bunch of objects
+    georgia = [State find:@"GA"];
+    if ( georgia ) {
+        [georgia delete];
+        // try to find it now that it is gone...
+        State *isGeorgiaThere = [State find:@"GA"];
+        if ( isGeorgiaThere ) {
+            NSLog(@"Georgia was found, why wasn't it deleted! [ERROR]");
+        }
+        else {
+            NSLog(@"Georgia not found, it was deleted correctly [OK]");
+        }
+    }
+    else {
+        NSLog(@"couldn't find georgia, where is it??? [ERROR]");
+    }
+    
     // Clear an entire collection
     NSLog(@"=== emptyCollection");
     [RAStore emptyCollection:@"State"];
     states = [State findAll];
     NSLog(@"%d states found, should be 0",[states count]);
+    
+    // Reload the state collection so we have something to search on
+    [RAStore replaceCollection:@"State" withResource:@"States" ofType:@"json" usingClass:[State class]];
 
     // Create an index on a field and search on it
-    // Insert resource from a URL
-    // Download a list of resources from a URL and update any that are new
-    // Delete a resource
-    // Delete a library
+    NSArray *statesWithCapitalA = [State findInCapital:@"like 'A%'"];
+    NSLog(@"found %d states with capitals that start with A",[statesWithCapitalA count]);
+    
+    // TODO: Insert resource from a URL
+    // TODO: Download a list of resources from a URL and update any that are new
+    // TODO: Delete a resource
+    // TODO: Delete a library
     
     // Do a bunch of inserts and see how long it takes. First build up
     // a JSON document with a bunch of objects in it

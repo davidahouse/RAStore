@@ -21,7 +21,7 @@
 - (NSString *)pathForUpdateTime;
 
 
-+ (NSArray *)search:(NSArray *)criteria inCollection:(NSString *)collection;
++ (NSArray *)search:(NSArray *)criteria withClass:(Class)searchClass;
 
 @end
 
@@ -41,7 +41,7 @@
         // unarchive the body
         NSData *archivedBody = [resultSet objectForColumnName:@"docBody"];
         NSKeyedUnarchiver *unarchiver = [[NSKeyedUnarchiver alloc] initForReadingWithData:archivedBody];
-        self.body = [unarchiver decodeObjectForKey:@"root"];
+        self.body = [[unarchiver decodeObjectForKey:@"root"] mutableCopy];
         [unarchiver finishDecoding];
     }
     return self;
@@ -88,17 +88,38 @@
     return self;
 }
 
+- (id)init {
+    
+    if ( self = [super init] ) {
+        self.body = [[NSMutableDictionary alloc] init];
+    }
+    return self;
+}
+
+#pragma mark - Index declarations
++ (NSArray *)indexedColumns {
+    return [NSArray array];
+}
 
 #pragma mark - Insert/Update/Delete methods
-- (void)store {
+- (void)insert {
     
     // get the default collection name
-    NSString *collection = NSStringFromClass([self class]);
-    [RAStore insertDocument:self intoCollection:collection];
+    [RAStore insertDocument:self withClass:[self class]];
 }
 
 - (void)update {
     
+    // get the default collection name
+    NSString *collection = NSStringFromClass([self class]);
+    [RAStore updateDocument:self inCollection:collection];
+}
+
+- (void)delete {
+    
+    // get the default collection name
+    NSString *collection = NSStringFromClass([self class]);
+    [RAStore deleteDocument:self fromCollection:collection];
 }
 
 #pragma mark - Query methods
@@ -119,10 +140,7 @@
 
 + (NSArray *)findWithForeignKey:(NSString *)foreignKey {
     
-    // get the default collection name
-    NSString *collection = NSStringFromClass([self class]);
-
-    return [RADocument search:@[[NSString stringWithFormat:@"docForeignKey = '%@'",foreignKey]] inCollection:collection];
+    return [RADocument search:@[[NSString stringWithFormat:@"docForeignKey = '%@'",foreignKey]] withClass:[self class]];
 }
 
 + (id)find:(NSString *)key {
@@ -141,10 +159,7 @@
 
 + (NSArray *)findInTitle:(NSString *)condition {
     
-    // get the default collection name
-    NSString *collection = NSStringFromClass([self class]);
-
-    return [RADocument search:@[[NSString stringWithFormat:@"docTitle %@",condition]] inCollection:collection];
+    return [RADocument search:@[[NSString stringWithFormat:@"docTitle %@",condition]] withClass:[self class]];
 }
 
 
@@ -163,8 +178,9 @@
     return resultArray;
 }
 
-+ (NSArray *)search:(NSArray *)criteria inCollection:(NSString *)collection {
++ (NSArray *)search:(NSArray *)criteria withClass:(Class)searchClass {
     
+    NSString *collection = NSStringFromClass(searchClass);
     
     // setup the where clause
     NSString *where = @"";
@@ -179,7 +195,7 @@
     NSMutableArray *resultArray = [[NSMutableArray alloc] init];
     while ( [results next] ) {
         
-        RADocument *resultModel = [[[self class] alloc] initFromResults:results];
+        RADocument *resultModel = [[searchClass alloc] initFromResults:results];
         [resultArray addObject:resultModel];
     }
     return resultArray;
@@ -218,13 +234,6 @@
         return [NSArray array];
     }
 }
-
-#pragma mark - Body update methods
-- (void)setStringInBody:(NSString *)setString usingPath:(NSString *)path {
-    
-    // TODO: implement this
-}
-
 
 
 #pragma mark - Path methods that should be overriden

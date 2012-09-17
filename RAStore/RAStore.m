@@ -11,7 +11,7 @@
 
 @interface RAStore ()
 
-+ (void)createCollectionIfDoesntExist:(NSString *)collection;
++ (void)createCollectionIfDoesntExist:(Class)docClass;
 
 @end
 
@@ -93,7 +93,7 @@ static NSMutableArray *staticCollectionList;
     for ( id doc in jsonObject ) {
         
         RADocument *newDoc = [[docClass alloc] initWithBody:doc];
-        [newDoc store];
+        [newDoc insert];
     }
 }
 
@@ -115,16 +115,17 @@ static NSMutableArray *staticCollectionList;
 
 + (void)emptyCollection:(NSString *)collection {
     
-    [RAStore createCollectionIfDoesntExist:collection];
+//    [RAStore createCollectionIfDoesntExist:collection];
     
     if ( ![staticStore executeUpdate:[NSString stringWithFormat:@"delete from %@",collection]] ) {
         NSLog(@"error emptying collection: %@",[staticStore lastErrorMessage]);
     }
 }
 
-+ (void)insertDocument:(RADocument *)document intoCollection:(NSString *)collection {
++ (void)insertDocument:(RADocument *)document withClass:(Class)docClass {
     
-    [RAStore createCollectionIfDoesntExist:collection];
+    NSString *collection = NSStringFromClass(docClass);
+    [RAStore createCollectionIfDoesntExist:docClass];
     
     // create an NSData object from the document body
     NSMutableData *bodyArchive = [NSMutableData data];
@@ -132,27 +133,35 @@ static NSMutableArray *staticCollectionList;
     [archiver encodeObject:document.body forKey:@"root"];
     [archiver finishEncoding];
     
-    NSString *checkSql = [NSString stringWithFormat:@"select count(*) from %@ where docKey = :docKey",collection];
-    FMResultSet *existing = [staticStore executeQuery:checkSql withParameterDictionary:@{@"docKey":document.key}];
-    if ( [existing next] ) {
-        int count = [existing intForColumnIndex:0];
-        if ( count > 0 ) {
-            
-            NSString *sql = [NSString stringWithFormat:@"update %@ set docForeignKey = :docForeignKey, docTitle = :docTitle, updateTime = :updateTime, docBody = :docBody where docKey = :docKey",collection];
-            if ( ![staticStore executeUpdate:sql withParameterDictionary:@{@"docKey":document.key,@"docForeignKey":document.foreignKey,@"docTitle":document.title,@"updateTime":[NSNumber numberWithDouble:[document.updateTime timeIntervalSince1970]],@"docBody":bodyArchive}]) {
-                NSLog(@"error updating data: %@",[staticStore lastErrorMessage]);
-            }
-        }
-        else {
-            
-            NSString *sql = [NSString stringWithFormat:@"insert into %@ VALUES (:docKey,:docForeignKey,:docTitle,:updateTime,:docBody)",collection];
-            if ( ![staticStore executeUpdate:sql withParameterDictionary:@{@"docKey":document.key,@"docForeignKey":document.foreignKey,@"docTitle":document.title,@"updateTime":[NSNumber numberWithDouble:[document.updateTime timeIntervalSince1970]],@"docBody":bodyArchive}]) {
-                NSLog(@"error inserting data: %@",[staticStore lastErrorMessage]);
-            }
-        }
+    NSString *sql = [NSString stringWithFormat:@"insert into %@ VALUES (:docKey,:docForeignKey,:docTitle,:updateTime,:docBody)",collection];
+    if ( ![staticStore executeUpdate:sql withParameterDictionary:@{@"docKey":document.key,@"docForeignKey":document.foreignKey,@"docTitle":document.title,@"updateTime":[NSNumber numberWithDouble:[document.updateTime timeIntervalSince1970]],@"docBody":bodyArchive}]) {
+
+        NSLog(@"error inserting data: %@",[staticStore lastErrorMessage]);
     }
-    
 }
+
++ (void)updateDocument:(RADocument *)document inCollection:(NSString *)collection {
+    
+    // create an NSData object from the document body
+    NSMutableData *bodyArchive = [NSMutableData data];
+    NSKeyedArchiver *archiver = [[NSKeyedArchiver alloc] initForWritingWithMutableData:bodyArchive];
+    [archiver encodeObject:document.body forKey:@"root"];
+    [archiver finishEncoding];
+
+    NSString *sql = [NSString stringWithFormat:@"update %@ set docForeignKey = :docForeignKey, docTitle = :docTitle, updateTime = :updateTime, docBody = :docBody where docKey = :docKey",collection];
+    if ( ![staticStore executeUpdate:sql withParameterDictionary:@{@"docKey":document.key,@"docForeignKey":document.foreignKey,@"docTitle":document.title,@"updateTime":[NSNumber numberWithDouble:[document.updateTime timeIntervalSince1970]],@"docBody":bodyArchive}]) {
+        NSLog(@"error updating data: %@",[staticStore lastErrorMessage]);
+    }
+}
+
++ (void)deleteDocument:(RADocument *)document fromCollection:(NSString *)collection {
+    
+    NSString *sql = [NSString stringWithFormat:@"delete from %@ where docKey = :docKey",collection];
+    if ( ![staticStore executeUpdate:sql withParameterDictionary:@{@"docKey":document.key}]) {
+        NSLog(@"error deleting data: %@",[staticStore lastErrorMessage]);
+    }
+}
+
 
 #pragma mark - Library methods
 + (void)replaceLibrary:(NSString *)library withResource:(NSString *)resource ofType:(NSString *)type {
@@ -201,8 +210,10 @@ static NSMutableArray *staticCollectionList;
 }
 
 #pragma mark - Private Methods
-+ (void)createCollectionIfDoesntExist:(NSString *)collection {
++ (void)createCollectionIfDoesntExist:(Class)docClass{
     
+    NSString *collection = NSStringFromClass(docClass);
+
     // Check for the static array that lists all the collections
     if ( !staticCollectionList ) {
         staticCollectionList = [[NSMutableArray alloc] init];
@@ -217,6 +228,18 @@ static NSMutableArray *staticCollectionList;
         if ( ![staticStore executeUpdate:createSQL] ) {
             NSLog(@"error creating table: %@",[staticStore lastErrorMessage]);
         }
+        
+        // Check to see if the class defines any custom indexes. If so,
+        // we need to create them.
+        NSArray *indexedColumns = [docClass indexedColumns];
+        for ( NSString *column in indexedColumns ) {
+            
+            NSString *indexSQL = [NSString stringWithFormat:@"create table if not exists %@_%@ (docKey text, %@ text)",collection,column,column];
+            if ( ![staticStore executeUpdate:indexSQL] ) {
+                NSLog(@"error creating table: %@_%@",collection,column);
+            }
+        }
+        
         [staticCollectionList addObject:collection];
     }
 }

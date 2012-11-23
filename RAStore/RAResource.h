@@ -11,9 +11,11 @@
 
 #pragma mark - Properties
 @property (nonatomic,retain) NSString *resourcePath;
+@property (nonatomic,retain) NSString *destinationFileName;
 
 # pragma mark - Class methods
 + (void)emptyLibrary:(NSString *)library;
++ (NSString *)pathForLibrary:(NSString *)library;
 
 #pragma mark - Initializers
 - (id)initWithResource:(NSString *)resource;

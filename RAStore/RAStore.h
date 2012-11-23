@@ -30,14 +30,18 @@
 + (void)insertDocument:(RADocument *)document withClass:(Class)docClass;
 + (void)updateDocument:(RADocument *)document inCollection:(NSString *)collection;
 + (void)deleteDocument:(RADocument *)document fromCollection:(NSString *)collection;
++ (BOOL)documentExists:(RADocument *)document inCollection:(NSString *)collection;
 
 #pragma mark - Library methods
 + (void)replaceLibrary:(NSString *)library withResource:(NSString *)resource ofType:(NSString *)type;
++ (void)replaceLibrary:(NSString *)library withResourcePrefix:(NSString *)prefix removePrefix:(BOOL)removePrefix;
 + (void)replaceLibrary:(NSString *)library withURL:(NSString *)url;
 + (void)replaceResouce:(NSString *)library withURL:(NSString *)url;
 
 #pragma mark - Query methods
 + (FMResultSet *)selectFromCollection:(NSString *)collection where:(NSString *)whereClause limit:(int)limit;
 
+#pragma mark - Execute methods
++ (void)executeSQL:(NSString *)sql;
 
 @end

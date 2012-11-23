@@ -133,8 +133,8 @@ static NSMutableArray *staticCollectionList;
     [archiver encodeObject:document.body forKey:@"root"];
     [archiver finishEncoding];
     
-    NSString *sql = [NSString stringWithFormat:@"insert into %@ VALUES (:docKey,:docForeignKey,:docTitle,:updateTime,:docBody)",collection];
-    if ( ![staticStore executeUpdate:sql withParameterDictionary:@{@"docKey":document.key,@"docForeignKey":document.foreignKey,@"docTitle":document.title,@"updateTime":[NSNumber numberWithDouble:[document.updateTime timeIntervalSince1970]],@"docBody":bodyArchive}]) {
+    NSString *sql = [NSString stringWithFormat:@"insert into %@ VALUES (:docKey,:docForeignKey,:docTitle,:updateTime,:orderNumber,:docBody)",collection];
+    if ( ![staticStore executeUpdate:sql withParameterDictionary:@{@"docKey":document.key,@"docForeignKey":document.foreignKey,@"docTitle":document.title,@"updateTime":[NSNumber numberWithDouble:[document.updateTime timeIntervalSince1970]],@"orderNumber":document.order,@"docBody":bodyArchive}]) {
 
         NSLog(@"error inserting data: %@",[staticStore lastErrorMessage]);
     }
@@ -148,8 +148,8 @@ static NSMutableArray *staticCollectionList;
     [archiver encodeObject:document.body forKey:@"root"];
     [archiver finishEncoding];
 
-    NSString *sql = [NSString stringWithFormat:@"update %@ set docForeignKey = :docForeignKey, docTitle = :docTitle, updateTime = :updateTime, docBody = :docBody where docKey = :docKey",collection];
-    if ( ![staticStore executeUpdate:sql withParameterDictionary:@{@"docKey":document.key,@"docForeignKey":document.foreignKey,@"docTitle":document.title,@"updateTime":[NSNumber numberWithDouble:[document.updateTime timeIntervalSince1970]],@"docBody":bodyArchive}]) {
+    NSString *sql = [NSString stringWithFormat:@"update %@ set docForeignKey = :docForeignKey, docTitle = :docTitle, updateTime = :updateTime, orderNumber = :orderNumber, docBody = :docBody where docKey = :docKey",collection];
+    if ( ![staticStore executeUpdate:sql withParameterDictionary:@{@"docKey":document.key,@"docForeignKey":document.foreignKey,@"docTitle":document.title,@"updateTime":[NSNumber numberWithDouble:[document.updateTime timeIntervalSince1970]],@"orderNumber":document.order,@"docBody":bodyArchive}]) {
         NSLog(@"error updating data: %@",[staticStore lastErrorMessage]);
     }
 }
@@ -159,6 +159,17 @@ static NSMutableArray *staticCollectionList;
     NSString *sql = [NSString stringWithFormat:@"delete from %@ where docKey = :docKey",collection];
     if ( ![staticStore executeUpdate:sql withParameterDictionary:@{@"docKey":document.key}]) {
         NSLog(@"error deleting data: %@",[staticStore lastErrorMessage]);
+    }
+}
+
++ (BOOL)documentExists:(RADocument *)document inCollection:(NSString *)collection {
+    
+    FMResultSet *results = [RAStore selectFromCollection:collection where:[NSString stringWithFormat:@"docKey = '%@'",document.key] limit:-1];
+    if ( [results next] ) {
+        return YES;
+    }
+    else {
+        return NO;
     }
 }
 
@@ -182,6 +193,31 @@ static NSMutableArray *staticCollectionList;
     }
 }
 
++ (void)replaceLibrary:(NSString *)library withResourcePrefix:(NSString *)prefix removePrefix:(BOOL)removePrefix {
+
+    [RAResource emptyLibrary:library];
+    
+    // Gather a list of the resources that match the name & type given to us
+    NSArray *foundFiles = [[NSBundle mainBundle] pathsForResourcesOfType:nil inDirectory:nil];
+    for ( NSString *path in foundFiles ) {
+        
+        NSRange foundRange = [[path lastPathComponent] rangeOfString:prefix];
+        if ( ([prefix isEqualToString:@""]) || (( foundRange.location != NSNotFound ) && ( foundRange.location == 0 ) )) {
+            
+            // ok to store the resource
+            RAResource *newResource = [[RAResource alloc] initWithResource:path];
+            
+            if ( removePrefix ) {
+                NSString *fileName = [path lastPathComponent];
+                fileName = [fileName stringByReplacingOccurrencesOfString:prefix withString:@""];
+                newResource.destinationFileName = fileName;
+            }
+            [newResource store:library];
+        }
+    }
+}
+
+
 + (void)replaceLibrary:(NSString *)library withURL:(NSString *)url {
     
 }
@@ -201,6 +237,7 @@ static NSMutableArray *staticCollectionList;
     if ( ![whereClause isEqualToString:@""] ) {
         querySql = [querySql stringByAppendingFormat:@" where %@",whereClause];
     }
+    querySql = [querySql stringByAppendingFormat:@" order by orderNumber"];
     if ( limit > 0 ) {
         querySql = [querySql stringByAppendingFormat:@" limit %d",limit];
     }
@@ -224,7 +261,7 @@ static NSMutableArray *staticCollectionList;
     if ( ![staticCollectionList containsObject:collection] ) {
     
         // create a table for this collection
-        NSString *createSQL = [NSString stringWithFormat:@"create table if not exists %@ (docKey text, docForeignKey text, docTitle text, updateTime real, docBody blob)",collection];
+        NSString *createSQL = [NSString stringWithFormat:@"create table if not exists %@ (docKey text, docForeignKey text, docTitle text, updateTime real, orderNumber integer, docBody blob)",collection];
         if ( ![staticStore executeUpdate:createSQL] ) {
             NSLog(@"error creating table: %@",[staticStore lastErrorMessage]);
         }
@@ -241,6 +278,14 @@ static NSMutableArray *staticCollectionList;
         }
         
         [staticCollectionList addObject:collection];
+    }
+}
+
+#pragma mark - Execute methods
++ (void)executeSQL:(NSString *)sql {
+    
+    if ( ![staticStore executeUpdate:sql] ) {
+        NSLog(@"error %@ executing query: %@",[staticStore lastErrorMessage],sql);
     }
 }
 

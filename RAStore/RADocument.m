@@ -19,7 +19,8 @@
 - (NSString *)pathForTitle;
 - (NSArray *)compositePathForTitle;
 - (NSString *)pathForUpdateTime;
-
+- (NSArray *)compositePathForOrder;
+- (NSString *)pathForOrder;
 
 + (NSArray *)search:(NSArray *)criteria withClass:(Class)searchClass;
 
@@ -37,6 +38,7 @@
         self.title = [resultSet stringForColumn:@"docTitle"];
         double timeSpan = [resultSet doubleForColumn:@"updateTime"];
         self.updateTime = [NSDate dateWithTimeIntervalSince1970:timeSpan];
+        self.order = [NSNumber numberWithInt:[resultSet intForColumn:@"orderNumber"]];
         
         // unarchive the body
         NSData *archivedBody = [resultSet objectForColumnName:@"docBody"];
@@ -83,6 +85,8 @@
             self.title = [self stringInBodyUsingPath:[self pathForTitle] default:@""];
         }
         
+        self.order = [self numberInBodyUsingPath:[self pathForOrder] default:[NSNumber numberWithInt:1]];
+        
         self.updateTime = [self dateInBodyUsingPath:[self pathForUpdateTime] default:[NSDate date]];
     }
     return self;
@@ -113,6 +117,18 @@
     // get the default collection name
     NSString *collection = NSStringFromClass([self class]);
     [RAStore updateDocument:self inCollection:collection];
+}
+
+
+- (void)insertOrUpdate {
+
+    NSString *collection = NSStringFromClass([self class]);
+    if ( [RAStore documentExists:self inCollection:collection] ) {        
+        [RAStore updateDocument:self inCollection:collection];
+    }
+    else {
+        [RAStore insertDocument:self withClass:[self class]];
+    }
 }
 
 - (void)delete {
@@ -160,6 +176,11 @@
 + (NSArray *)findInTitle:(NSString *)condition {
     
     return [RADocument search:@[[NSString stringWithFormat:@"docTitle %@",condition]] withClass:[self class]];
+}
+
++ (NSArray *)findWithTitle:(NSString *)title {
+    
+    return [RADocument search:@[[NSString stringWithFormat:@"docTitle = '%@'",title]] withClass:[self class]];
 }
 
 
@@ -235,6 +256,20 @@
     }
 }
 
+- (NSNumber *)numberInBodyUsingPath:(NSString *)path default:(NSNumber *)defaultNumber {
+    
+    // Turn the path into an array
+    NSArray *searchPath = [path componentsSeparatedByString:@"\\"];
+    id find = [self.body valueForPath:searchPath];
+    if ( find ) {
+        return [NSNumber numberWithInt:[[NSString stringWithFormat:@"%@",find] intValue]];
+    }
+    else {
+        return defaultNumber;
+    }
+}
+
+
 
 #pragma mark - Path methods that should be overriden
 - (NSString *)pathForKey {
@@ -265,5 +300,14 @@
 - (NSString *)pathForUpdateTime {
     return @"";
 }
+
+- (NSArray *)compositePathForOrder {
+    return nil;
+}
+
+- (NSString *)pathForOrder {
+    return @"";
+}
+
 
 @end

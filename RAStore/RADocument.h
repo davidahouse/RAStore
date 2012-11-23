@@ -16,6 +16,7 @@
 @property (nonatomic) NSString *title;
 @property (nonatomic) NSDate *updateTime;
 @property (nonatomic) id body;
+@property (nonatomic) NSNumber *order;
 
 #pragma mark - Initializers
 - (id)initFromResults:(FMResultSet *)resultSet;
@@ -28,11 +29,13 @@
 #pragma mark - Insert/Update/Delete methods
 - (void)insert;
 - (void)update;
+- (void)insertOrUpdate;
 - (void)delete;
 
 #pragma mark - Query methods
 + (id)find:(NSString *)key;
 + (NSArray *)findInTitle:(NSString *)condition;
++ (NSArray *)findWithTitle:(NSString *)title;
 + (NSArray *)mostRecent:(int)top;
 + (NSArray *)findAll;
 + (NSArray *)findWithForeignKey:(NSString *)foreignKey;
@@ -41,6 +44,6 @@
 - (NSString *)stringInBodyUsingPath:(NSString *)path default:(NSString *)defaultString;
 - (NSDate *)dateInBodyUsingPath:(NSString *)path default:(NSDate *)defaultDate;
 - (NSArray *)arrayInBodyUsingPath:(NSString *)path;
-
+- (NSNumber *)numberInBodyUsingPath:(NSString *)path default:(NSNumber *)defaultNumber;
 
 @end

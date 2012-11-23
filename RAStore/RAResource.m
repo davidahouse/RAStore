@@ -25,6 +25,15 @@
     [RAResource createLibraryIfDoesntExist:library];
 }
 
++ (NSString *)pathForLibrary:(NSString *)library {
+    
+    NSString *documentsDirectory = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) lastObject];
+    NSString *fullPath = [documentsDirectory stringByAppendingPathComponent:library];
+    [RAResource createLibraryIfDoesntExist:library];
+    return fullPath;
+}
+
+
 #pragma mark - Initializers
 - (id)initWithResource:(NSString *)resource {
     if ( self = [super init] ) {
@@ -39,6 +48,9 @@
     // Copy the file into the local file system if we are loaded from a resource
     if ( self.resourcePath ) {
         NSString *fileName = [self.resourcePath lastPathComponent];
+        if ( self.destinationFileName ) {
+            fileName = self.destinationFileName;
+        }
         NSString *documentsDirectory = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) lastObject];
         NSString *libraryPath = [documentsDirectory stringByAppendingPathComponent:library];
         NSString *destPath = [libraryPath stringByAppendingPathComponent:fileName];

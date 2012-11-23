@@ -16,7 +16,14 @@
         return nil;
     }
     else if ( [path count] == 1 ) {
-        return [self valueForKey:[path objectAtIndex:0]];
+        
+        if ( [self valueForKey:[path objectAtIndex:0]] &&
+            [self valueForKey:[path objectAtIndex:0]] != [NSNull null]) {
+            return [self valueForKey:[path objectAtIndex:0]];
+        }
+        else {
+            return nil;
+        }
     }
     else {
         // first take first element out of the array

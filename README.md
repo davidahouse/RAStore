@@ -4,5 +4,4 @@ RAStore
 
 Objective-C document store
 
-Need to add some documentation here.
-
+This is an abandoned repo, look at my newer store DHMambaStore for something similar and much better!
